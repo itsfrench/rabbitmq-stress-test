@@ -1,0 +1,22 @@
+{
+  "name": "rabbitmq-stress-test",
+  "version": "1.0.0",
+  "description": "An NPM package to stress test your RabbitMQ instance.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsfrench/rabbitmq-stress-test.git"
+  },
+  "author": "Cheri French",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/itsfrench/rabbitmq-stress-test/issues"
+  },
+  "homepage": "https://github.com/itsfrench/rabbitmq-stress-test#readme",
+  "dependencies": {
+    "amqplib": "^0.10.3"
+  }
+}
