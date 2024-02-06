@@ -10,6 +10,18 @@
     "type": "git",
     "url": "git+https://github.com/itsfrench/rabbitmq-stress-test.git"
   },
+  "keywords": [
+    "rabbitmq",
+    "AMQP",
+    "stress test",
+    "testing",
+    "load testing",
+    "round robin",
+    "random",
+    "extended duration",
+    "single binding",
+    "topic type exchange"
+  ],
   "author": "Cheri French",
   "license": "ISC",
   "bugs": {
