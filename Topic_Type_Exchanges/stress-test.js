@@ -1,11 +1,11 @@
 /* 
-This test will act as a publisher within your RabbitMQ instance. After instantiated, you will be able to send messages to all queues round-robin.
+This test will act as a publisher within your RabbitMQ instance. After instantiated, you will be able to send messages to all queues with various types of tests.
 
-This class has the following methods: connectToRabbit, publishMessage, closeConnection, prepTests, runTest, takeSnapShot, updateRoundRobinRabbit, and updateTarget.
+This class has the following methods: connectToRabbit, publishMessage, closeConnection, prepTests, runTest, takeSnapShot, updateRabbitStressTest, and updateTarget.
 
-This test will send messages to each binding provided in sequential order.
+There are four different types of tests you can run with this package: round-robin, random, extended-duration, and single-binding. Please pass in a string specifying which test you want to run when invoking the runTest method. 
 
-To create a new instance of the RoundRobinRabbit class, you will need to provide the following: rabbitAddress, exchanges, bindings, and a target for how many messages you want to send.
+To create a new instance of the RabbitStressTest class, you will need to provide the following: rabbitAddress, exchanges, bindings, and a target for how many messages you want to send.
 
   * "rabbitAddress" is URL in which the test can connect to the user's RabbitMQ's instance.
   * "exchanges" is an array containing objects with information on the exchanges
@@ -35,7 +35,7 @@ examples:
 
 const amqp = require('amqplib');
 
-class RoundRobinRabbit {
+class RabbitStressTest {
   constructor(rabbitAddress, exchanges, bindings, target) {
     this.rabbitAddress = rabbitAddress;
     this.exchanges = {};
@@ -45,7 +45,7 @@ class RoundRobinRabbit {
     this.totalMessagesSent = 0;
     this.snapShots = [];
     this.message = {
-      type: 'Round Robin',
+      type: 'Stress Test',
     };
     exchanges.forEach((exc) => {
       this.exchanges[exc.name] = exc;
@@ -53,7 +53,7 @@ class RoundRobinRabbit {
     this.target = (target) ? target : 1000;
   };
 
-  //this method makes the connetion to rabbit
+  //this method makes the connection to rabbit
   async connectToRabbitMQ() {
     try {
       this.connection = await amqp.connect(this.rabbitAddress);
@@ -95,7 +95,7 @@ class RoundRobinRabbit {
     }
   }
 
-  //This method needs to be invoked before using the runTest method to compile all of the exchanges and bindings in a format to be easily sent to the publisher. It will also create the connection to RabbitMQ prior to running the test. 
+  // This method needs to be invoked before using the runTest method to compile all of the exchanges and bindings into a format that can be easily sent to the publisher. It will also create the connection to RabbitMQ prior to running the test.
   async prepTests() {
     await this.connectToRabbitMQ();
     this.bindings.forEach((binding) => {
@@ -110,22 +110,56 @@ class RoundRobinRabbit {
     this.readyToTest = true;
   };
 
-  //This method will check to make sure the connection and channel are established, capture the time, send messages to hit the target, take a snapshot, close the connection, and log the snapshot data. 
-  async runTest() {
+  //This method will check to make sure the connection and channel are established, capture the time, send messages to hit the target, take a snapshot, close the connection, and log the snapshot data. Please provide the type of test you would like to conduct (type) as the argument passed in.
+  async runTest(type) {
     if (this.readyToTest === false) return;
     try {
       if (!this.connection || !this.channel) {
         await this.connectToRabbitMQ();
-        console.log('Starting the round robin test.');
       }
+      console.log(`Starting the ${type} test.`);
       this.start = new Date(Date.now());
-      while (this.totalMessagesSent <= this.target) {
-        this.testMessages.forEach(async (msg) => {
-          await this.publishMessage(msg.exchangeName, msg.key, msg.message); 
-        });
+      switch (type) {
+        //this will send messages across all bindings in a round-robin order
+        case 'round-robin': 
+          while (this.totalMessagesSent <= this.target) {
+            for (const msg of this.testMessages) {
+              this.publishMessage(msg.exchangeName, msg.key, msg.message);
+            }
+          }
+          break;
+        //this will send messages across all bindings in a random order
+        case 'random': 
+          while (this.totalMessagesSent <= this.target) {
+            this.randomNumber = (Math.floor(Math.random() * this.testMessages.length));
+            this.publishMessage(this.testMessages[this.randomNumber].exchangeName, this.testMessages[this.randomNumber].key, this.testMessages[this.randomNumber].message);
+          }
+          delete this.randomNumber;
+          break;
+        //this test will run for one hour and send in a round-robin order
+        case 'extended-duration': 
+          this.testDuration = 3600000; 
+          while (Date.now() - this.start < this.testDuration) {
+            for (const msg of this.testMessages) {
+              this.publishMessage(msg.exchangeName, msg.key, msg.message);
+            }
+          }
+          delete this.testDuration;
+          break;
+        //this test will send to only one random binding up to the target number
+        case 'single-binding': 
+          this.randomNumber = (Math.floor(Math.random() * this.testMessages.length));
+          while (this.totalMessagesSent <= this.target) {
+            this.publishMessage(this.testMessages[this.randomNumber].exchangeName, this.testMessages[this.randomNumber].key, this.testMessages[this.randomNumber].message);
+          };
+          delete this.randomNumber;
+          break;
+        default:
+          console.log('Could not find the type of test to run. Please ')
       }
       this.takeSnapShot(this.start);
       this.closeConnection();
+      this.totalMessagesSent = 0;
       console.log(this.snapShots);
     } catch (error) {
       console.error('Error running tests:', error);
@@ -152,8 +186,8 @@ class RoundRobinRabbit {
     });
   };
 
-  //this method will allow you to completely update your Round Robin test environment
-  updateRoundRobinRabbit(rabbitAddress, exchanges, bindings) {
+  //this method will allow you to completely update your rabbitAddress, exchanges, and bindings in the test environment
+  updateRabbitStressTest(rabbitAddress, exchanges, bindings) {
     this.rabbitAddress = rabbitAddress;
     this.exchanges = {};
     this.bindings = bindings;
@@ -167,9 +201,11 @@ class RoundRobinRabbit {
       this.exchanges[exc.name] = exc;
     });
   }
+
+  //use this method to update the target of messages to be sent 
   updateTarget(target) {
     if (target && typeof target === 'number') this.target = target;
   }
 }
 
-module.exports = RoundRobinRabbit;
+module.exports = RabbitStressTest;
