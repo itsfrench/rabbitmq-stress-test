@@ -32,12 +32,12 @@ examples:
       routing_key: 'Auth',
       arguments: {}
     }, {...}, {...}]
-*/ 
+*/
 
 const amqp = require('amqplib');
 
 class RandomRabbit {
-  constructor (rabbitAddress, exchanges, bindings, target) {
+  constructor(rabbitAddress, exchanges, bindings, target) {
     this.rabbitAddress = rabbitAddress;
     this.exchanges = {}
     this.bindings = bindings;
@@ -51,24 +51,24 @@ class RandomRabbit {
     exchanges.forEach((exc) => {
       this.exchanges[exc.name] = exc;
     })
-    this.target = (target) ? target : 1000; 
+    this.target = (target) ? target : 1000;
   }
-  
+
   //this method makes the connetion to rabbit 
   async connectToRabbitMQ() {
     try {
-      this.connection = await amqp.connect(this.rabbitAddress); 
+      this.connection = await amqp.connect(this.rabbitAddress);
       this.channel = await this.connection.createChannel();
       console.log('Connected to amqp');
 
     } catch (error) {
-      console.error('Error establishing connection:', error);
+      console.error('There was an error establishing the connection or channel: ', error);
       throw error;
     }
   };
 
-//publishes a message to the exchange
-  async publishMessage(exchangeName, key, msgObj) { //exchangeType will need to be added back if you need to assert the exchange in the future
+  //publishes a message to the exchange
+  async publishMessage(exchangeName, key, msgObj) {
     try {
       //await this.channel.assertExchange(exchangeName, exchangeType, { durable: true });
       this.channel.publish(exchangeName, key, Buffer.from(JSON.stringify(msgObj)));
@@ -78,6 +78,7 @@ class RandomRabbit {
       throw error;
     }
   };
+
   //closes the connection to rabbit 
   async closeConnection() {
     try {
@@ -88,13 +89,13 @@ class RandomRabbit {
         await this.connection.close();
       }
     } catch (error) {
-      console.error('Error closing connection:', error);
+      console.error('There was an error closing connection or channel: ', error);
       throw error;
     }
   };
 
   //this method needs to be run so it can compile all of the exchanges and bindings in a format to be easily sent to the publisher 
-  prepTests () { 
+  prepTests() {
     this.connectToRabbitMQ();
     this.bindings.forEach((binding) => {
       this.testMessages.push({
@@ -105,20 +106,17 @@ class RandomRabbit {
         message: this.message,
       })
     })
-    this.readyToTest = true; 
+    this.readyToTest = true;
   }
 
   //method to begin testing
-  async runTest () { 
+  async runTest() {
     if (this.readyToTest === false) return;
     try {
-      if (!this.connection || !this.channel) {
-        await this.connectToRabbitMQ();
-        console.log('Starting the random test.')
-      }
+      if (!this.connection || !this.channel) await this.connectToRabbitMQ();
       this.start = new Date(Date.now());
       //check the total number of bindings, and create a random number 
-      while(this.totalMessagesSent <= this.target) {
+      while (this.totalMessagesSent <= this.target) {
         this.randomNumber = (Math.floor(Math.random() * this.testMessages.length))
         await this.publishMessage(this.testMessages[this.randomNumber].exchangeName, this.testMessages[this.randomNumber].key, this.testMessages[this.randomNumber].message)
       }
@@ -128,11 +126,11 @@ class RandomRabbit {
     }
     catch (error) {
       console.error('Error running tests: ', error);
-    } 
+    }
   }
 
   //this will take a snapshot of the current testing environment 
-  takeSnapShot (startDate) {
+  takeSnapShot(startDate) {
     this.snapShots.push({
       rabbitAddress: this.rabbitAddress,
       exchanges: this.exchanges,
@@ -142,13 +140,13 @@ class RandomRabbit {
       target: this.target,
       start: startDate,
       end: new Date(Date.now()),
-      testDuration: (Date.now()-startDate) / 1000,
-      messageSuccessRate: Math.floor(this.totalMessagesSent/this.target * 100),
+      testDuration: (Date.now() - startDate) / 1000,
+      messageSuccessRate: Math.floor(this.totalMessagesSent / this.target * 100),
     });
-  } 
+  }
 
   //this method will allow you to completely update your Random test environment but will maintain all previous snapshots.
-  updateRandomRabbit (rabbitAddress, exchanges, bindings) {
+  updateRandomRabbit(rabbitAddress, exchanges, bindings) {
     this.rabbitAddress = rabbitAddress;
     this.exchanges = {}
     this.bindings = bindings;

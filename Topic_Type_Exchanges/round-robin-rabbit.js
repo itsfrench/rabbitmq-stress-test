@@ -31,7 +31,7 @@ examples:
       routing_key: 'Auth',
       arguments: {}
     }, {...}, {...}]
-*/ 
+*/
 
 const amqp = require('amqplib');
 
@@ -51,7 +51,7 @@ class RoundRobinRabbit {
       this.exchanges[exc.name] = exc;
     });
     this.target = (target) ? target : 1000;
-  }
+  };
 
   //this method makes the connetion to rabbit
   async connectToRabbitMQ() {
@@ -60,16 +60,14 @@ class RoundRobinRabbit {
       this.channel = await this.connection.createChannel();
       console.log('Connected to amqp');
     } catch (error) {
-      console.error('Error establishing connection:', error);
+      console.error('There was an error establishing the connection or channel: ', error);
       throw error;
     }
-  }
+  };
 
   //publishes a message to the exchange
-  async publishMessage(exchangeName, key, msgObj) {
-    //exchangeType will need to be added back if you need to assert the exchange in the future
+  publishMessage(exchangeName, key, msgObj) {
     try {
-      //await this.channel.assertExchange(exchangeName, exchangeType, { durable: true });
       this.channel.publish(
         exchangeName,
         key,
@@ -80,7 +78,7 @@ class RoundRobinRabbit {
       console.error('Error publishing message:', error);
       throw error;
     }
-  }
+  };
 
   //closes the connection to rabbit
   async closeConnection() {
@@ -92,14 +90,14 @@ class RoundRobinRabbit {
         await this.connection.close();
       }
     } catch (error) {
-      console.error('Error closing connection:', error);
+      console.error('There was an error closing connection or channel:', error);
       throw error;
     }
   }
 
-  //This method needs to be invoked before using the runTest method to compile all of the exchanges and bindings in a format to be easily sent to the publisher. It will also connect to RabbitMQ.
-  prepTests() {
-    this.connectToRabbitMQ();
+  //This method needs to be invoked before using the runTest method to compile all of the exchanges and bindings in a format to be easily sent to the publisher. It will also create the connection to RabbitMQ prior to running the test. 
+  async prepTests() {
+    await this.connectToRabbitMQ();
     this.bindings.forEach((binding) => {
       this.testMessages.push({
         exchangeName: binding.source,
@@ -110,9 +108,9 @@ class RoundRobinRabbit {
       });
     });
     this.readyToTest = true;
-  }
+  };
 
-  //method to begin testing
+  //This method will check to make sure the connection and channel are established, capture the time, send messages to hit the target, take a snapshot, close the connection, and log the snapshot data. 
   async runTest() {
     if (this.readyToTest === false) return;
     try {
@@ -123,7 +121,7 @@ class RoundRobinRabbit {
       this.start = new Date(Date.now());
       while (this.totalMessagesSent <= this.target) {
         this.testMessages.forEach(async (msg) => {
-          await this.publishMessage(msg.exchangeName, msg.key, msg.message); //msg.exchangeType
+          await this.publishMessage(msg.exchangeName, msg.key, msg.message); 
         });
       }
       this.takeSnapShot(this.start);
@@ -131,8 +129,9 @@ class RoundRobinRabbit {
       console.log(this.snapShots);
     } catch (error) {
       console.error('Error running tests:', error);
+      throw error;
     }
-  }
+  };
 
   //this will take a snapshot of the current testing environment
   takeSnapShot(startDate) {
@@ -151,7 +150,7 @@ class RoundRobinRabbit {
         (this.totalMessagesSent / this.target) * 100
       ),
     });
-  }
+  };
 
   //this method will allow you to completely update your Round Robin test environment
   updateRoundRobinRabbit(rabbitAddress, exchanges, bindings) {
