@@ -1,6 +1,6 @@
 {
   "name": "rabbitmq-stress-test",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "An NPM package to stress test your RabbitMQ instance.",
   "main": "index.js",
   "scripts": {
