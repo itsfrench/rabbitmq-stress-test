@@ -1,21 +1,25 @@
 /* 
-This test will act as a publisher within your RabbitMQ instance. After instantiated, you will be able to send messages to all queues with various types of tests.
+This class acts as a publisher within your RabbitMQ instance. Once instantiated, you can send messages to all queues for various types of tests.
 
-This class has the following methods: connectToRabbit, publishMessage, closeConnection, prepTests, runTest, takeSnapShot, updateRabbitStressTest, and updateTarget.
+This class includes the following methods: connectToRabbitMQ, publishMessage, closeConnection, prepTests, runTest, takeSnapShot, updateRabbitStressTest, and updateTarget.
 
-There are four different types of tests you can run with this package: round-robin, random, extended-duration, and single-binding. Please pass in a string specifying which test you want to run when invoking the runTest method. 
+There are four types of tests you can run with this package: round-robin, random, extended-duration, and single-binding. When invoking the runTest method, please provide a string specifying which test you want to run.
 
-To create a new instance of the RabbitStressTest class, you will need to provide the following: rabbitAddress, exchanges, bindings, and a target for how many messages you want to send.
+To create a new instance of the RabbitStressTest class, you need to provide the following parameters: rabbitAddress, exchanges, bindings, message, and target.
 
-  * "rabbitAddress" is URL in which the test can connect to the user's RabbitMQ's instance.
-  * "exchanges" is an array containing objects with information on the exchanges
-  * "bindings" is an array containing objects with the information on all of the bindings
-  * "target" is the number of messages you want to send throughout your instance. 50k messages take about 1 second, and 100k messages take about 2 seconds. If a target is not provided, it will default to 1000.
+
+  * "rabbitAddress" is the URI specifying the protocol and location for connecting to a RabbitMQ server. If you're connecting to an instance running on your local machine, use "amqp://localhost". Otherwise, specify the IP address of the machine running the RabbitMQ instance you want to test.
+  * "exchanges" is an array containing objects with information on the exchanges. Examples are provided below.
+  * "bindings" is an array containing objects with information on all the bindings. Examples are provided below.
+  * "message" is an object containing any information you want this class to send to all consumers when running the test. If no message object is provided, it defaults to an object with one key-value pair, "{type: 'Stress Test'}".
+  * "target" is the number of messages you want to send throughout your instance. Sending 50k messages takes about 1 second, and 100k messages take about 2 seconds. If a target is not provided, it defaults to 1000.
+
 
 examples: 
   rabbitAddress = 'amqp://localhost'
+  
   exchanges = [{ 
-      name: 'trekker_topic',
+      name: 'exchange_topic',
       vhost: '/',
       type: 'topic',
       durable: true,
@@ -23,8 +27,9 @@ examples:
       internal: false,
       arguments: {}
     }, {...}, {...}]
+
   bindings = [{
-      source: 'trekker_topic',
+      source: 'exchange_topic',
       vhost: '/',
       destination: 'AuthQueue',
       destination_type: 'queue',
@@ -36,7 +41,7 @@ examples:
 const amqp = require('amqplib');
 
 class RabbitStressTest {
-  constructor(rabbitAddress, exchanges, bindings, target) {
+  constructor(rabbitAddress, exchanges, bindings, message, target) {
     this.rabbitAddress = rabbitAddress;
     this.exchanges = {};
     this.bindings = bindings;
@@ -44,28 +49,27 @@ class RabbitStressTest {
     this.testMessages = [];
     this.totalMessagesSent = 0;
     this.snapShots = [];
-    this.message = {
-      type: 'Stress Test',
-    };
+    this.message = (message) ? message : {type: 'Stress Test'};
     exchanges.forEach((exc) => {
       this.exchanges[exc.name] = exc;
     });
     this.target = (target) ? target : 1000;
   };
 
-  //this method makes the connection to rabbit
+  //This method establishes a connection to RabbitMQ and creates a channel on the connection.
+
   async connectToRabbitMQ() {
     try {
       this.connection = await amqp.connect(this.rabbitAddress);
       this.channel = await this.connection.createChannel();
-      console.log('Connected to amqp');
     } catch (error) {
       console.error('There was an error establishing the connection or channel: ', error);
       throw error;
     }
   };
 
-  //publishes a message to the exchange
+  //This method publishes a message to the exchange.
+
   publishMessage(exchangeName, key, msgObj) {
     try {
       this.channel.publish(
@@ -80,7 +84,8 @@ class RabbitStressTest {
     }
   };
 
-  //closes the connection to rabbit
+  //This method closes the connection to RabbitMQ. 
+
   async closeConnection() {
     try {
       if (this.channel) {
@@ -95,7 +100,8 @@ class RabbitStressTest {
     }
   }
 
-  // This method needs to be invoked before using the runTest method to compile all of the exchanges and bindings into a format that can be easily sent to the publisher. It will also create the connection to RabbitMQ prior to running the test.
+  //This method compiles all exchanges and bindings into a format that can be easily sent to the publisher and invokes 'connectToRabbitMQ' before you invoke the 'runTest' method.
+
   async prepTests() {
     await this.connectToRabbitMQ();
     this.bindings.forEach((binding) => {
@@ -110,17 +116,17 @@ class RabbitStressTest {
     this.readyToTest = true;
   };
 
-  //This method will check to make sure the connection and channel are established, capture the time, send messages to hit the target, take a snapshot, close the connection, and log the snapshot data. Please provide the type of test you would like to conduct (type) as the argument passed in.
+  //This method will check to make sure the connection and channel are established, capture the start time, send messages to hit the target, take a snapshot, and close the connection. Please provide the type of test you would like to conduct (type) as the argument passed in. If you have not already invoked 'prepTests', this method will return without sending any messages. 
+
   async runTest(type) {
     if (this.readyToTest === false) return;
     try {
       if (!this.connection || !this.channel) {
         await this.connectToRabbitMQ();
       }
-      console.log(`Starting the ${type} test.`);
       this.start = new Date(Date.now());
       switch (type) {
-        //this will send messages across all bindings in a round-robin order
+        //This test type will send messages across all bindings in a round-robin order.
         case 'round-robin': 
           while (this.totalMessagesSent <= this.target) {
             for (const msg of this.testMessages) {
@@ -128,7 +134,7 @@ class RabbitStressTest {
             }
           }
           break;
-        //this will send messages across all bindings in a random order
+        //This test type will send messages across all bindings in a random order.
         case 'random': 
           while (this.totalMessagesSent <= this.target) {
             this.randomNumber = (Math.floor(Math.random() * this.testMessages.length));
@@ -136,7 +142,7 @@ class RabbitStressTest {
           }
           delete this.randomNumber;
           break;
-        //this test will run for one hour and send in a round-robin order
+        //This test type will run for one hour and send in a round-robin order.
         case 'extended-duration': 
           this.testDuration = 3600000; 
           while (Date.now() - this.start < this.testDuration) {
@@ -146,7 +152,7 @@ class RabbitStressTest {
           }
           delete this.testDuration;
           break;
-        //this test will send to only one random binding up to the target number
+        //This test type will send to only one random binding up to the target number.
         case 'single-binding': 
           this.randomNumber = (Math.floor(Math.random() * this.testMessages.length));
           while (this.totalMessagesSent <= this.target) {
@@ -155,21 +161,20 @@ class RabbitStressTest {
           delete this.randomNumber;
           break;
         default:
-          console.log('Could not find the type of test to run. Please ')
+          console.error('Could not find the type of test to run. Please ')
       }
       this.takeSnapShot(this.start);
       this.closeConnection();
       this.totalMessagesSent = 0;
-      console.log(this.snapShots);
     } catch (error) {
       console.error('Error running tests:', error);
       throw error;
     }
   };
 
-  //this will take a snapshot of the current testing environment
+  //This method takes a snapshot of the current testing environment, including the start time, end time, duration, and message success rate.
+
   takeSnapShot(startDate) {
-    console.log('Taking a snapshot.');
     this.snapShots.push({
       rabbitAddress: this.rabbitAddress,
       exchanges: this.exchanges,
@@ -186,7 +191,8 @@ class RabbitStressTest {
     });
   };
 
-  //this method will allow you to completely update your rabbitAddress, exchanges, and bindings in the test environment
+  //This method will allow you to update your rabbitAddress, exchanges, and bindings in the test environment, but will not overwrite your snapshot data. 
+
   updateRabbitStressTest(rabbitAddress, exchanges, bindings) {
     this.rabbitAddress = rabbitAddress;
     this.exchanges = {};
@@ -202,7 +208,8 @@ class RabbitStressTest {
     });
   }
 
-  //use this method to update the target of messages to be sent 
+  //Use this method to update the target of messages to be sent.
+
   updateTarget(target) {
     if (target && typeof target === 'number') this.target = target;
   }
