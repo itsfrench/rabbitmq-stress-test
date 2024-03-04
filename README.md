@@ -18,10 +18,11 @@ RabbitStressTest is a Node.js library designed to facilitate stress testing and 
 	const rabbitAddress = 'amqp://localhost';
 	const exchanges = [{...}, {...}, {...}];
 	const bindings = [{...}, {...}, {...}];
+	const message = {topic: "...", message: "..."}
 	const target = 1000;
 
 	// Create an instance of RabbitStressTest
-	const stressTest = new RabbitStressTest(rabbitAddress, exchanges, bindings, target);
+	const stressTest = new RabbitStressTest(rabbitAddress, exchanges, bindings, message, target);
 
 	// Prepare the tests before running
 	stressTest.prepTests();

@@ -191,21 +191,21 @@ class RabbitStressTest {
     });
   };
 
-  //This method will allow you to update your rabbitAddress, exchanges, and bindings in the test environment, but will not overwrite your snapshot data. 
+  //This method will allow you to update your rabbitAddress, exchanges, bindings, and message in the test environment, but will not overwrite your snapshot data. 
 
-  updateRabbitStressTest(rabbitAddress, exchanges, bindings) {
-    this.rabbitAddress = rabbitAddress;
-    this.exchanges = {};
-    this.bindings = bindings;
+  updateRabbitStressTest(rabbitAddress, exchanges, bindings, message) {
+    if (rabbitAddress) this.rabbitAddress = rabbitAddress;
+    if (exchanges) {
+      this.exchanges = {};
+      exchanges.forEach((exc) => {
+        this.exchanges[exc.name] = exc;
+      });
+    };
+    if (bindings) this.bindings = bindings;
     this.readyToTest = false;
     this.testMessages = [];
     this.totalMessagesSent = 0;
-    this.message = {
-      type: 'Round Robin',
-    };
-    exchanges.forEach((exc) => {
-      this.exchanges[exc.name] = exc;
-    });
+    if (message) this.message = message;
   }
 
   //Use this method to update the target of messages to be sent.
