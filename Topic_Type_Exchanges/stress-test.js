@@ -54,7 +54,7 @@ class RabbitStressTest {
       this.exchanges[exc.name] = exc;
     });
     this.target = (target) ? target : 1000;
-  };
+  }
 
   //This method establishes a connection to RabbitMQ and creates a channel on the connection.
 
@@ -66,7 +66,7 @@ class RabbitStressTest {
       console.error('There was an error establishing the connection or channel: ', error);
       throw error;
     }
-  };
+  }
 
   //This method publishes a message to the exchange.
 
@@ -82,7 +82,7 @@ class RabbitStressTest {
       console.error('Error publishing message:', error);
       throw error;
     }
-  };
+  }
 
   //This method closes the connection to RabbitMQ. 
 
@@ -114,7 +114,7 @@ class RabbitStressTest {
       });
     });
     this.readyToTest = true;
-  };
+  }
 
   //This method will check to make sure the connection and channel are established, capture the start time, send messages to hit the target, take a snapshot, and close the connection. Please provide the type of test you would like to conduct (type) as the argument passed in. If you have not already invoked 'prepTests', this method will return without sending any messages. 
 
@@ -170,7 +170,7 @@ class RabbitStressTest {
       console.error('Error running tests:', error);
       throw error;
     }
-  };
+  }
 
   //This method takes a snapshot of the current testing environment, including the start time, end time, duration, and message success rate.
 
@@ -190,7 +190,7 @@ class RabbitStressTest {
         (this.totalMessagesSent / this.target) * 100
       ),
     });
-  };
+  }
 
   //This method will allow you to update your rabbitAddress, exchanges, bindings, and message in the test environment, but will not overwrite your snapshot data. 
 
@@ -207,7 +207,7 @@ class RabbitStressTest {
     this.testMessages = [];
     this.totalMessagesSent = 0;
     if (message) this.message = message;
-  }
+  };
 
   //Use this method to update the target of messages to be sent.
 
