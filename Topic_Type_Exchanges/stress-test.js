@@ -49,7 +49,7 @@ class RabbitStressTest {
     this.testMessages = [];
     this.totalMessagesSent = 0;
     this.snapShots = [];
-    this.message = (message) ? message : {type: 'Stress Test'};
+    this.message = (message) ? message : { type: 'Stress Test' };
     exchanges.forEach((exc) => {
       this.exchanges[exc.name] = exc;
     });
@@ -127,7 +127,7 @@ class RabbitStressTest {
       this.start = new Date(Date.now());
       switch (type) {
         //This test type will send messages across all bindings in a round-robin order.
-        case 'round-robin': 
+        case 'round-robin':
           while (this.totalMessagesSent <= this.target) {
             for (const msg of this.testMessages) {
               this.publishMessage(msg.exchangeName, msg.key, msg.message);
@@ -135,7 +135,7 @@ class RabbitStressTest {
           }
           break;
         //This test type will send messages across all bindings in a random order.
-        case 'random': 
+        case 'random':
           while (this.totalMessagesSent <= this.target) {
             this.randomNumber = (Math.floor(Math.random() * this.testMessages.length));
             this.publishMessage(this.testMessages[this.randomNumber].exchangeName, this.testMessages[this.randomNumber].key, this.testMessages[this.randomNumber].message);
@@ -143,8 +143,8 @@ class RabbitStressTest {
           delete this.randomNumber;
           break;
         //This test type will run for one hour and send in a round-robin order.
-        case 'extended-duration': 
-          this.testDuration = 3600000; 
+        case 'extended-duration':
+          this.testDuration = 3600000;
           while (Date.now() - this.start < this.testDuration) {
             for (const msg of this.testMessages) {
               this.publishMessage(msg.exchangeName, msg.key, msg.message);
@@ -153,7 +153,7 @@ class RabbitStressTest {
           delete this.testDuration;
           break;
         //This test type will send to only one random binding up to the target number.
-        case 'single-binding': 
+        case 'single-binding':
           this.randomNumber = (Math.floor(Math.random() * this.testMessages.length));
           while (this.totalMessagesSent <= this.target) {
             this.publishMessage(this.testMessages[this.randomNumber].exchangeName, this.testMessages[this.randomNumber].key, this.testMessages[this.randomNumber].message);
@@ -163,7 +163,7 @@ class RabbitStressTest {
         default:
           console.error('Could not find the type of test to run. Please ')
       }
-      this.takeSnapShot(this.start);
+      this.takeSnapShot(this.start, type);
       this.closeConnection();
       this.totalMessagesSent = 0;
     } catch (error) {
@@ -174,12 +174,13 @@ class RabbitStressTest {
 
   //This method takes a snapshot of the current testing environment, including the start time, end time, duration, and message success rate.
 
-  takeSnapShot(startDate) {
+  takeSnapShot(startDate, type) {
     this.snapShots.push({
       rabbitAddress: this.rabbitAddress,
       exchanges: this.exchanges,
       bindings: this.bindings,
       testMessages: this.testMessages,
+      testType: type, 
       totalMessagesSent: this.totalMessagesSent,
       target: this.target,
       start: startDate,
